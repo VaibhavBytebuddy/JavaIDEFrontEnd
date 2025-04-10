@@ -1,0 +1,81 @@
+.editor-container {
+          padding: 20px;
+          height: 100vh;
+        }
+        
+        .file-list-container {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .file-list {
+          flex-grow: 1;
+          overflow-y: auto;
+          margin-bottom: 1rem;
+        }
+        
+        .monaco-editor-container {
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          overflow: hidden;
+          height: 60vh;
+        }
+        
+        .button-group {
+          margin-bottom: 1rem;
+          display: flex;
+          gap: 0.5rem;
+        }
+        
+        .filename-input {
+          margin-bottom: 1rem;
+        }
+        
+        .output-panel {
+          margin-top: 1rem;
+        }
+        
+        .output-container {
+          max-height: 200px;
+          overflow-y: auto;
+          background-color: #f8f9fa;
+          border-radius: 4px;
+          padding: 10px;
+          scroll-behavior: smooth;
+        }
+        
+        .output-content, .error-content {
+          margin: 0;
+          font-family: 'Courier New', monospace;
+          font-size: 14px;
+          white-space: pre-wrap;
+        }
+        
+        .error-content {
+          color: #dc3545;
+        }
+        
+        .execution-time {
+          font-size: 0.8rem;
+          color: #6c757d;
+          margin-top: 5px;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: #888;
+          border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+          background: #555;
+        }

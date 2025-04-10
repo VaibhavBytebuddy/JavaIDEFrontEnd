@@ -1,62 +1,180 @@
-// src/components/Editor/Editor.tsx
-import { useState, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Button, Container, Row, Col, ListGroup } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { Container, Row, Col, Button, ListGroup, Form } from 'react-bootstrap';
+import { Editor } from '@monaco-editor/react';
+import OutputPanel from './OutputPanel';
+import './styles.css';
 
-export default function CodeEditor() {
+const CodeEditor = () => {
   const [files, setFiles] = useState<any[]>([]);
-  const [selectedFile, setSelectedFile] = useState<any>(null);
-  const [code, setCode] = useState('// Write your Java code here');
+  const [selectedFile, setSelectedFile] = useState<any>();
+  const [code, setCode] = useState('// Write your Java code here\npublic class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello, World!");\n  }\n}');
+  const [fileName, setFileName] = useState('Main.java');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState({
+    output: '',
+    error: '',
+    executionTime: 0
+  });
+  const [activeTab, setActiveTab] = useState('output');
+  const [shouldScroll, setShouldScroll] = useState(false);
 
   useEffect(() => {
-    axios.get('/api/files')
-      .then(res => setFiles(res.data))
-      .catch(err => console.error(err));
+    loadFiles();
   }, []);
 
-  const handleSave = () => {
-    axios.post('/api/files', {
-      filename: selectedFile?.filename || 'NewFile.java',
-      content: code
-    }).then(res => {
-      setFiles([...files, res.data]);
+  const loadFiles = async () => {
+    try {
+      const response = await axios.get('/api/files');
+      setFiles(response.data);
+    } catch (err) {
+      console.error('Error loading files:', err);
+    }
+  };
+
+  const handleFileSelect = (file: any) => {
+    setSelectedFile(file);
+    setCode(file.content);
+    setFileName(file.filename);
+  };
+
+  const handleSave = async () => {
+    try {
+      const fileData = {
+        filename: fileName,
+        content: code
+      };
+
+      const response = selectedFile?.id
+        ? await axios.put(`/api/files/${selectedFile.id}`, fileData)
+        : await axios.post('/api/files', fileData);
+
+      loadFiles();
+    } catch (error) {
+      console.error('Error saving file:', error);
+    }
+  };
+
+  const handleExecute = async () => {
+    setIsExecuting(true);
+    setExecutionResult({
+      output: '',
+      error: '',
+      executionTime: 0
     });
+    setShouldScroll(false);
+
+    try {
+      const response = await axios.post('/api/execute', { code });
+      const result = {
+        output: response.data.output,
+        error: response.data.error,
+        executionTime: response.data.executionTime
+      };
+
+      setExecutionResult(result);
+      setShouldScroll(true);
+
+      if (result.error) {
+        setActiveTab('errors');
+      } else {
+        setActiveTab('output');
+      }
+    } catch (err: any) {
+      setExecutionResult({
+        output: '',
+        error: 'Failed to execute code: ' + err.message,
+        executionTime: 0
+      });
+      setActiveTab('errors');
+      setShouldScroll(true);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleNewFile = () => {
+    setSelectedFile(null);
+    setCode('// Write your Java code here\npublic class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello, World!");\n  }\n}');
+    setFileName('Main.java');
   };
 
   return (
-    <Container fluid className="mt-3">
+    <Container fluid className="editor-container">
       <Row>
-        <Col md={3}>
-          <ListGroup>
+        <Col md={3} className="file-list-container pe-3">
+          <div className="button-group">
+            <Button variant="primary" onClick={handleSave} size="sm">
+              Save
+            </Button>
+            <Button 
+              variant="success" 
+              onClick={handleExecute}
+              disabled={isExecuting}
+              size="sm"
+            >
+              {isExecuting ? 'Running...' : 'Run'}
+            </Button>
+            <Button 
+              variant="outline-secondary" 
+              onClick={handleNewFile}
+              size="sm"
+            >
+              New
+            </Button>
+          </div>
+          
+          <ListGroup className="file-list">
             {files.map(file => (
-              <ListGroup.Item 
+              <ListGroup.Item
                 key={file.id}
+                action
                 active={selectedFile?.id === file.id}
-                onClick={() => {
-                  setSelectedFile(file);
-                  setCode(file.content);
-                }}
+                onClick={() => handleFileSelect(file)}
               >
                 {file.filename}
               </ListGroup.Item>
             ))}
           </ListGroup>
-          <Button variant="primary" className="mt-2" onClick={handleSave}>
-            Save
-          </Button>
         </Col>
+        
         <Col md={9}>
-          <Editor
-            height="80vh"
-            defaultLanguage="java"
-            value={code}
-            onChange={(value) => setCode(value || '')}
-            theme="vs-dark"
+          <Form.Control
+            className="filename-input mb-3"
+            type="text"
+            value={fileName}
+            onChange={(e) => setFileName(e.target.value)}
+            placeholder="Filename (e.g., Main.java)"
+          />
+          
+          <div className="monaco-editor-container">
+            <Editor
+              height="100%"
+              language="java"
+              value={code}
+              onChange={(value) => setCode(value || '')}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                wordWrap: 'on',
+                automaticLayout: true,
+              }}
+            />
+          </div>
+          
+          <OutputPanel
+            output={executionResult.output}
+            error={executionResult.error}
+            executionTime={executionResult.executionTime}
+            activeKey={activeTab}
+            onTabSelect={setActiveTab}
+            shouldScroll={shouldScroll}
           />
         </Col>
       </Row>
     </Container>
   );
-}
+};
+
+export default CodeEditor;
