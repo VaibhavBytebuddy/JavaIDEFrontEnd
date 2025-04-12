@@ -28,7 +28,6 @@ export default function OutputPanel({
         behavior: 'smooth',
         block: 'nearest'
       });
-      // Also scroll to bottom of content
       outputEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [output, error, shouldScroll]);
